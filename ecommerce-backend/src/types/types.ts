@@ -38,3 +38,11 @@ export interface IBaseQuery {
   price?: { $lte: number };
   category?: string;
 }
+
+
+export type InvalidateCacheProps = {
+  product?:boolean;
+  order?:boolean;
+  admin?:boolean;
+
+}

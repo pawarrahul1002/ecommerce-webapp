@@ -10,6 +10,7 @@ import ErrorHandler from "../utils/ErrorHandler.js";
 import { rm } from "fs";
 import mongoose from "mongoose";
 import { myCache } from "../app.js";
+import { invalidateCache } from "../utils/features.js";
 
 export const newProduct = TryCatch(
   async (req: Request<{}, {}, INewProductRequestBody>, res, next) => {
@@ -35,6 +36,8 @@ export const newProduct = TryCatch(
       photo: photo?.path,
     });
 
+    await invalidateCache({product:true});
+    
     return res.status(201).json({
       success: true,
       message: "Product created successfully",
@@ -42,12 +45,14 @@ export const newProduct = TryCatch(
   }
 );
 
+//revalidate caching on request - new, update,delete, and on new order
 export const getLatestProduct = TryCatch(async (req, res, next) => {
   let products;
   if (myCache.has("latest-products")) {
     products = JSON.parse(myCache.get("latest-products") as string);
   } else {
     products = await Product.find({}).sort({ createdAt: -1 }).limit(5);
+    myCache.set("latest-products", JSON.stringify(products));
   }
 
   return res.status(200).json({
@@ -56,17 +61,31 @@ export const getLatestProduct = TryCatch(async (req, res, next) => {
   });
 });
 
+//revalidate caching on request - new, update,delete, and on new order
 export const getAllCategories = TryCatch(async (req, res, next) => {
-  const categories = await Product.distinct("category");
+  let categories;
+  if (myCache.has("categories")) {
+    categories = JSON.parse(myCache.get("categories") as string);
+  } else {
+    categories = await Product.distinct("category");
+    myCache.set("categories", JSON.stringify(categories));
+  }
 
-  return res.status(201).json({
+  return res.status(200).json({
     success: true,
     message: categories,
   });
 });
 
+//revalidate caching on request - new, update,delete, and on new order
 export const getAllProducts = TryCatch(async (req, res, next) => {
-  const products = await Product.find({});
+  let products;
+  if (myCache.has("all-products")) {
+    products = JSON.parse(myCache.get("all-products") as string);
+  } else {
+    products = await Product.find({});
+    myCache.set("all-products", JSON.stringify(products));
+  }
 
   return res.status(201).json({
     success: true,
@@ -74,17 +93,28 @@ export const getAllProducts = TryCatch(async (req, res, next) => {
   });
 });
 
+//revalidate caching on request - new, update,delete, and on new order
 export const getProductByID = TryCatch(async (req, res, next) => {
   const id = req.params.id;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return next(new ErrorHandler("Invalid Id", 400));
   }
+  let product;
 
-  const product = await Product.findById(req.params.id);
+  if (myCache.has(`$product-${id}`)) {
+    console.log("faster");
+    product = JSON.parse(myCache.get(`$product-${id}`) as string);
+  } else {
+    product = await Product.findById(req.params.id);
 
-  if (!product) {
-    return next(new ErrorHandler("product not found", 404));
+    if (!product) {
+      
+      return next(new ErrorHandler("product not found", 404));
+    }
+    console.log("slower");
+
+    myCache.set(`$product-${id}`, JSON.stringify(product));
   }
 
   return res.status(200).json({
@@ -145,6 +175,8 @@ export const updateProduct = TryCatch(async (req, res, next) => {
       message: "Found no changes in the product",
     });
   }
+  
+  await invalidateCache({product:true});
 
   return res.status(200).json({
     success: true,
@@ -175,6 +207,9 @@ export const deleteProduct = TryCatch(async (req, res, next) => {
 
   await product.deleteOne();
 
+  
+  await invalidateCache({product:true});
+  
   return res.status(200).json({
     success: true,
     message: "Product deleted successfully",

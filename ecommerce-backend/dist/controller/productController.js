@@ -3,6 +3,8 @@ import { Product } from "../models/product.js";
 import ErrorHandler from "../utils/ErrorHandler.js";
 import { rm } from "fs";
 import mongoose from "mongoose";
+import { myCache } from "../app.js";
+import { invalidateCache } from "../utils/features.js";
 export const newProduct = TryCatch(async (req, res, next) => {
     const { name, price, stock, category } = req.body;
     const photo = req.file;
@@ -22,40 +24,75 @@ export const newProduct = TryCatch(async (req, res, next) => {
         category: category.toLowerCase(),
         photo: photo?.path,
     });
+    await invalidateCache({ product: true });
     return res.status(201).json({
         success: true,
         message: "Product created successfully",
     });
 });
+//revalidate caching on request - new, update,delete, and on new order
 export const getLatestProduct = TryCatch(async (req, res, next) => {
-    const products = await Product.find({}).sort({ createdAt: -1 }).limit(5);
-    return res.status(201).json({
+    let products;
+    if (myCache.has("latest-products")) {
+        products = JSON.parse(myCache.get("latest-products"));
+    }
+    else {
+        products = await Product.find({}).sort({ createdAt: -1 }).limit(5);
+        myCache.set("latest-products", JSON.stringify(products));
+    }
+    return res.status(200).json({
         success: true,
         message: products,
     });
 });
+//revalidate caching on request - new, update,delete, and on new order
 export const getAllCategories = TryCatch(async (req, res, next) => {
-    const categories = await Product.distinct("category");
-    return res.status(201).json({
+    let categories;
+    if (myCache.has("categories")) {
+        categories = JSON.parse(myCache.get("categories"));
+    }
+    else {
+        categories = await Product.distinct("category");
+        myCache.set("categories", JSON.stringify(categories));
+    }
+    return res.status(200).json({
         success: true,
         message: categories,
     });
 });
+//revalidate caching on request - new, update,delete, and on new order
 export const getAllProducts = TryCatch(async (req, res, next) => {
-    const products = await Product.find({});
+    let products;
+    if (myCache.has("all-products")) {
+        products = JSON.parse(myCache.get("all-products"));
+    }
+    else {
+        products = await Product.find({});
+        myCache.set("all-products", JSON.stringify(products));
+    }
     return res.status(201).json({
         success: true,
         message: products,
     });
 });
+//revalidate caching on request - new, update,delete, and on new order
 export const getProductByID = TryCatch(async (req, res, next) => {
     const id = req.params.id;
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return next(new ErrorHandler("Invalid Id", 400));
     }
-    const product = await Product.findById(req.params.id);
-    if (!product) {
-        return next(new ErrorHandler("product not found", 404));
+    let product;
+    if (myCache.has(`$product-${id}`)) {
+        console.log("faster");
+        product = JSON.parse(myCache.get(`$product-${id}`));
+    }
+    else {
+        product = await Product.findById(req.params.id);
+        if (!product) {
+            return next(new ErrorHandler("product not found", 404));
+        }
+        console.log("slower");
+        myCache.set(`$product-${id}`, JSON.stringify(product));
     }
     return res.status(200).json({
         success: true,
@@ -106,6 +143,7 @@ export const updateProduct = TryCatch(async (req, res, next) => {
             message: "Found no changes in the product",
         });
     }
+    await invalidateCache({ product: true });
     return res.status(200).json({
         success: true,
         message: "Product updated successfully",
@@ -127,6 +165,7 @@ export const deleteProduct = TryCatch(async (req, res, next) => {
         });
     }
     await product.deleteOne();
+    await invalidateCache({ product: true });
     return res.status(200).json({
         success: true,
         message: "Product deleted successfully",
@@ -141,7 +180,7 @@ export const getAllProductsWithFilters = TryCatch(async (req, res, next) => {
     if (typeof search === "string") {
         baseQuery.name = {
             $regex: search,
-            $options: 'i',
+            $options: "i",
         };
     }
     if (typeof price === "string" && !isNaN(Number(price))) {

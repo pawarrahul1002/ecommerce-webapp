@@ -3,12 +3,14 @@ import userRoutes from "./routes/userRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import { connectDB } from "./utils/features.js";
 import { ErrorMiddleware } from "./middlewares/error.js";
+import NodeCache from "node-cache";
 const app = express();
 app.use(express.json());
 // app.use("uploads", express.static("uploads"));
 app.use("/uploads", express.static("uploads"));
 connectDB();
 const port = 3000;
+export const myCache = new NodeCache();
 // app.get("/", (req, res) => {
 //   res.send("This is default get req");
 // });
