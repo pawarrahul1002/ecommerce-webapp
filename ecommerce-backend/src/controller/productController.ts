@@ -9,7 +9,7 @@ import {
 import ErrorHandler from "../utils/ErrorHandler.js";
 import { rm } from "fs";
 import mongoose from "mongoose";
-import { isNumberObject } from "util/types";
+import { myCache } from "../app.js";
 
 export const newProduct = TryCatch(
   async (req: Request<{}, {}, INewProductRequestBody>, res, next) => {
@@ -43,9 +43,14 @@ export const newProduct = TryCatch(
 );
 
 export const getLatestProduct = TryCatch(async (req, res, next) => {
-  const products = await Product.find({}).sort({ createdAt: -1 }).limit(5);
+  let products;
+  if (myCache.has("latest-products")) {
+    products = JSON.parse(myCache.get("latest-products") as string);
+  } else {
+    products = await Product.find({}).sort({ createdAt: -1 }).limit(5);
+  }
 
-  return res.status(201).json({
+  return res.status(200).json({
     success: true,
     message: products,
   });
@@ -191,7 +196,7 @@ export const getAllProductsWithFilters = TryCatch(
     if (typeof search === "string") {
       baseQuery.name = {
         $regex: search,
-        $options: 'i',
+        $options: "i",
       };
     }
 
