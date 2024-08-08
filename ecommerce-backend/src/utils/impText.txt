@@ -1,0 +1,49 @@
+
+    // throw next(new ErrorHandler("My custom error",502));
+    // throw next(new Error("sdkvbsdh"));
+
+
+{
+    const { name, email, photo, _id, dob, gender } = req.body;
+
+    let user = await User.findById(_id);
+    console.log(_id);
+    if (user) {
+      return res.status(200).json({
+        success: true,
+        message: `Welcome ${user.name}`,
+      });
+    }
+
+    user = await User.findOne({email});
+    if(user)
+    {
+      return res.status(400).json({
+        success: true,
+        message: `Email ${email} already exists`,
+      });
+    }
+
+
+
+    if (!name || !email || !photo || !_id || !dob || !gender) {
+      return res.status(200).json({
+        success: true,
+        message: "Enter all fields",
+      });
+    }
+
+    user = await User.create({
+      name,
+      email,
+      photo,
+      _id,
+      dob: new Date(dob),
+      gender,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Welcome ${user.name}`,
+    });
+}
