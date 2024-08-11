@@ -14,4 +14,8 @@ app.get("/getProduct/:id", getProductByID);
 app.put("/updateProduct/:id",adminOnly, singleUpload, updateProduct);
 app.delete("/deleteProduct/:id",adminOnly, deleteProduct);
 
+
+app.put("/updateProduct/:id",adminOnly, singleUpload, updateProduct);
+app.delete("/deleteProduct/:id",adminOnly, deleteProduct);
+
 export default app;

@@ -105,10 +105,10 @@ export const updateProduct = TryCatch(async (req, res, next) => {
         return next(new ErrorHandler("Invalid Id", 400));
     }
     const product = await Product.findById(productId);
-    let updated = false;
     if (!product) {
         return next(new ErrorHandler("Product not found", 404));
     }
+    let updated = false;
     const photo = req.file;
     if (photo) {
         rm(product.photo, () => {
@@ -190,17 +190,17 @@ export const getAllProductsWithFilters = TryCatch(async (req, res, next) => {
     if (typeof category === "string") {
         baseQuery.category = category;
     }
+    const totalResultAfterFilter = Product.find(baseQuery);
     const numberOfProductOnPageAfterfilter = Product.find(baseQuery)
         .sort(sort && { price: sort === "asc" ? 1 : -1 })
         .limit(limit)
         .skip(skip);
-    const totalResultAfterFilter = Product.find(baseQuery);
-    const [products, filterOnlyProducts] = await Promise.all([
+    const [productsOnOnePage, totalFilteredResult] = await Promise.all([
         numberOfProductOnPageAfterfilter,
         totalResultAfterFilter,
     ]);
-    const totalPages = Math.ceil(filterOnlyProducts.length / limit);
+    const totalPages = Math.ceil(totalFilteredResult.length / limit);
     return res
         .status(200)
-        .json({ success: true, message: { products, totalPages } });
+        .json({ success: true, message: { productsOnOnePage, totalPages } });
 });
