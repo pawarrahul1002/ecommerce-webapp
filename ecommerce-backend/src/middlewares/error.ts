@@ -10,6 +10,14 @@ export const ErrorMiddleware = (
 ) => {
   err.message ||= "Internal server error";
   err.statusCode ||= 500;
+  console.log('error found :: ')
+  if(err.message.includes('Cast to ObjectId failed'))
+  {
+    return res.status(err.statusCode).json({
+      success: false,
+      message: 'Invalid Object ID',
+    });
+  }
 
   return res.status(err.statusCode).json({
     success: false,

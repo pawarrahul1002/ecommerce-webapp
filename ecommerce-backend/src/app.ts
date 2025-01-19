@@ -3,17 +3,23 @@ import express, { NextFunction, Request, Response } from "express";
 import userRoutes from "./routes/userRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import ordersRoutes from "./routes/orderRoutes.js";
+import paymentRoutes from "./routes/paymentRoute.js";
+import statsRoutes from "./routes/statsRoutes.js";
 
 import { connectDB } from "./utils/features.js";
 import { ErrorMiddleware } from "./middlewares/error.js";
 import NodeCache from "node-cache";
 import dotenv from "dotenv";
 import morgan from "morgan";
+import Stripe from "stripe";
 
 const app = express();
 app.use(express.json());
 app.use(morgan("dev"));
 dotenv.config();
+
+const stripeKey = process.env.STRIPE_KEY || "";
+export const stripe = new Stripe(stripeKey);
 
 app.use("/uploads", express.static("uploads"));
 
@@ -33,10 +39,12 @@ export const myCache = new NodeCache();
 app.use("/api/v1/user", userRoutes);
 app.use("/api/v1/product", productRoutes);
 app.use("/api/v1/orders", ordersRoutes);
+app.use("/api/v1/payment", paymentRoutes);
+app.use("/api/v1/dashboard", statsRoutes);
 
-app.use("/", (req, res) => {
-  console.log("This is default req");
-});
+// app.use("/", (req, res) => {
+//   console.log("This is default req");
+// });
 
 app.use(ErrorMiddleware);
 

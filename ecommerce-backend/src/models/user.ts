@@ -69,4 +69,4 @@ userSchema.virtual("age").get(function () {
   return age;
 });
 
-export const User = mongoose.model("User", userSchema);
+export const User = mongoose.model<IUser>("User", userSchema);

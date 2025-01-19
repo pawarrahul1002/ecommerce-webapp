@@ -44,6 +44,9 @@ export type InvalidateCacheProps = {
   product?: boolean;
   order?: boolean;
   admin?: boolean;
+  userId?:string;
+  orderId?:string;
+  productId?:string | string[];
 };
 
 /**
@@ -65,18 +68,20 @@ export type shippingInfo = {
   city: string;
   state: string;
   country: string;
-  pincode: number;
+  pinCode: number;
 };
 
+export type orderStatus = "processing"| "shipped"| "delivered"|"cancelled";
+
 export interface INewOrderRequestbody {
-  shipingInfo: shippingInfo;
-  userId: mongoose.Types.ObjectId;
+  shippingInfo: shippingInfo;
+  userId:string;
   subTotal: number;
   tax: number;
-  shippingcharges: number;
+  shippingCharges: number;
   discount: number;
   total: number;
-  status: string;
+  status: orderStatus;
   orderItems: OrderItem[];
 }
 

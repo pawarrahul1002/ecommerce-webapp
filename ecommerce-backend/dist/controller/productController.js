@@ -5,6 +5,7 @@ import { rm } from "fs";
 import mongoose from "mongoose";
 import { myCache } from "../app.js";
 import { invalidateCache } from "../utils/features.js";
+import { faker } from "@faker-js/faker";
 export const newProduct = TryCatch(async (req, res, next) => {
     const { name, price, stock, category } = req.body;
     const photo = req.file;
@@ -24,7 +25,7 @@ export const newProduct = TryCatch(async (req, res, next) => {
         category: category.toLowerCase(),
         photo: photo?.path,
     });
-    await invalidateCache({ product: true });
+    await invalidateCache({ product: true, admin: true });
     return res.status(201).json({
         success: true,
         message: "Product created successfully",
@@ -83,16 +84,15 @@ export const getProductByID = TryCatch(async (req, res, next) => {
     }
     let product;
     if (myCache.has(`$product-${id}`)) {
-        console.log("faster");
-        product = JSON.parse(myCache.get(`$product-${id}`));
+        product = JSON.parse(myCache.get(`product-${id}`));
     }
     else {
         product = await Product.findById(req.params.id);
         if (!product) {
             return next(new ErrorHandler("product not found", 404));
         }
-        console.log("slower");
-        myCache.set(`$product-${id}`, JSON.stringify(product));
+        console.log(`seetting cache : product-${id}`);
+        myCache.set(`product-${id}`, JSON.stringify(product));
     }
     return res.status(200).json({
         success: true,
@@ -143,7 +143,11 @@ export const updateProduct = TryCatch(async (req, res, next) => {
             message: "Found no changes in the product",
         });
     }
-    await invalidateCache({ product: true });
+    // const temp1 = JSON.parse(myCache.get(`product-${productId}`) as string);
+    // console.log("before-update : ", temp1);
+    await invalidateCache({ product: true, productId: productId, admin: true });
+    // const temp2 = JSON.parse(myCache.get(`product-${productId}`) as string);
+    // console.log("after-update : ", temp2);
     return res.status(200).json({
         success: true,
         message: "Product updated successfully",
@@ -161,11 +165,11 @@ export const deleteProduct = TryCatch(async (req, res, next) => {
     const path = product.photo;
     if (path) {
         rm(path, () => {
-            console.log("old photo deleted");
+            console.log("Product photo deleted");
         });
     }
     await product.deleteOne();
-    await invalidateCache({ product: true });
+    await invalidateCache({ product: true, productId: productId, admin: true });
     return res.status(200).json({
         success: true,
         message: "Product deleted successfully",
@@ -173,6 +177,7 @@ export const deleteProduct = TryCatch(async (req, res, next) => {
 });
 export const getAllProductsWithFilters = TryCatch(async (req, res, next) => {
     const { search, sort, category, price } = req.query;
+    console.log(req.query);
     const page = Number(req.query.page) || 1;
     const limit = Number(process.env.PRODUCT_PER_PAGE) || 8;
     const skip = (page - 1) * limit;
@@ -204,3 +209,33 @@ export const getAllProductsWithFilters = TryCatch(async (req, res, next) => {
         .status(200)
         .json({ success: true, message: { productsOnOnePage, totalPages } });
 });
+export const generateRandomProducts = TryCatch(async (req, res, next) => {
+    const products = [];
+    for (let i = 0; i < 40; i++) {
+        const product = {
+            name: faker.commerce.productName(),
+            photo: "uploads\\3b69b920-3429-499f-8c1c-0fcc65a29ec1.png",
+            price: faker.commerce.price({ min: 1500, max: 80000, dec: 0 }),
+            stock: faker.commerce.price({ min: 0, max: 100, dec: 0 }),
+            category: faker.commerce.department(),
+            createdAt: new Date(faker.date.past()),
+            updatedAt: new Date(faker.date.recent()),
+            __v: 0,
+        };
+        products.push(product);
+    }
+    await Product.create(products);
+    console.log({ succecss: true });
+    return res.status(201).json({
+        success: true,
+        message: "New Products created successfully",
+    });
+});
+// const deleteRandomsProducts = async (count: number = 10) => {
+//   const products = await Product.find({}).skip(2);
+//   for (let i = 0; i < products.length; i++) {
+//     const product = products[i];
+//     await product.deleteOne();
+//   }
+//   console.log({ succecss: true });
+// };

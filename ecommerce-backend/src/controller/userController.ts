@@ -50,7 +50,7 @@ export const newUser = TryCatch(
       gender,
     });
 
-    return res.status(200).json({
+    return res.status(201).json({
       success: true,
       message: `Welcome ${user.name}`,
     });

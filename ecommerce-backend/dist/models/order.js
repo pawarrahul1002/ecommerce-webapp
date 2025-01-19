@@ -27,21 +27,21 @@ const orderSchema = new mongoose.Schema({
             type: String,
             required: true,
         },
-        contry: {
+        country: {
             type: String,
             required: true,
         },
-        pincode: {
+        pinCode: {
             type: Number,
             required: true,
         },
     },
     userId: {
-        type: mongoose.Types.ObjectId,
+        type: String,
         ref: "User",
         required: true,
     },
-    subtotal: {
+    subTotal: {
         type: Number,
         required: true,
     },
@@ -52,10 +52,12 @@ const orderSchema = new mongoose.Schema({
     shippingCharges: {
         type: Number,
         required: true,
+        default: 0,
     },
     discount: {
         type: Number,
         required: true,
+        default: 0,
     },
     total: {
         type: Number,
@@ -63,7 +65,10 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["processing", "shippped", "delivered"],
+        enum: {
+            values: ["processing", "shipped", "delivered", "cancelled"],
+            message: "Order status is invalid. Must be one of: processing, shipped, delivered, cancelled",
+        },
         default: "processing",
     },
     orderItems: [
